@@ -19,12 +19,10 @@ package org.apache.avro;
 
 import static org.apache.avro.SchemaCompatibility.checkReaderWriterCompatibility;
 import static org.junit.Assert.assertEquals;
-
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
 import org.apache.avro.Schema.Field;
 import org.apache.avro.SchemaCompatibility.SchemaCompatibilityType;
 import org.apache.avro.SchemaCompatibility.SchemaPairCompatibility;
@@ -38,6 +36,7 @@ import org.apache.avro.io.DecoderFactory;
 import org.apache.avro.io.Encoder;
 import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.util.Utf8;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -371,6 +370,11 @@ public class TestSchemaCompatibility {
 
       // Tests involving unions:
       new ReaderWriter(EMPTY_UNION_SCHEMA, EMPTY_UNION_SCHEMA),
+      new ReaderWriter(FLOAT_UNION_SCHEMA, EMPTY_UNION_SCHEMA),
+      // int unions are actually not readable by float unions, see below test case
+      // new ReaderWriter(FLOAT_UNION_SCHEMA, INT_UNION_SCHEMA),
+      // long unions are actually not readable by float unions, see below test case
+      // new ReaderWriter(FLOAT_UNION_SCHEMA, LONG_UNION_SCHEMA),
       new ReaderWriter(INT_UNION_SCHEMA, INT_UNION_SCHEMA),
       new ReaderWriter(INT_STRING_UNION_SCHEMA, STRING_INT_UNION_SCHEMA),
       new ReaderWriter(INT_UNION_SCHEMA, EMPTY_UNION_SCHEMA),
@@ -612,7 +616,7 @@ public class TestSchemaCompatibility {
       LOG.debug("Encode datum {} with writer {}.", datum, writerSchema);
       final ByteArrayOutputStream baos = new ByteArrayOutputStream();
       final Encoder encoder = EncoderFactory.get().binaryEncoder(baos, null);
-      final DatumWriter<Object> datumWriter = new GenericDatumWriter<Object>(writerSchema);
+      final DatumWriter<Object> datumWriter = new GenericDatumWriter<>(writerSchema);
       datumWriter.write(datum, encoder);
       encoder.flush();
 
@@ -623,7 +627,7 @@ public class TestSchemaCompatibility {
       final Decoder decoder = DecoderFactory.get().resolvingDecoder(
           writerSchema, readerSchema,
           DecoderFactory.get().binaryDecoder(bytes, null));
-      final DatumReader<Object> datumReader = new GenericDatumReader<Object>(readerSchema);
+      final DatumReader<Object> datumReader = new GenericDatumReader<>(readerSchema);
       final Object decodedDatum = datumReader.read(null, decoder);
 
       assertEquals(String.format(
@@ -636,9 +640,32 @@ public class TestSchemaCompatibility {
 
   /** Borrowed from the Guava library. */
   private static <E> ArrayList<E> list(E... elements) {
-    final ArrayList<E> list = new ArrayList<E>();
+    final ArrayList<E> list = new ArrayList<>();
     Collections.addAll(list, elements);
     return list;
   }
 
+  @Ignore("should float unions be compatible with other number unions, or not?")
+  @Test
+  public void testFloatUnionReaderAndIntLongUnionWriterIncompatibility() {
+    SchemaPairCompatibility result = checkReaderWriterCompatibility(FLOAT_UNION_SCHEMA,
+        INT_UNION_SCHEMA);
+    assertEquals(
+        String.format(
+            "Expecting reader %s to be incompatible with writer %s, but tested compatible.",
+            FLOAT_UNION_SCHEMA, INT_UNION_SCHEMA),
+        SchemaCompatibilityType.INCOMPATIBLE, result.getType());
+    result = checkReaderWriterCompatibility(FLOAT_UNION_SCHEMA, LONG_UNION_SCHEMA);
+    assertEquals(
+        String.format(
+            "Expecting reader %s to be incompatible with writer %s, but tested compatible.",
+            FLOAT_UNION_SCHEMA, LONG_UNION_SCHEMA),
+        SchemaCompatibilityType.INCOMPATIBLE, result.getType());
+    result = checkReaderWriterCompatibility(FLOAT_UNION_SCHEMA, INT_LONG_UNION_SCHEMA);
+    assertEquals(
+        String.format(
+            "Expecting reader %s to be incompatible with writer %s, but tested compatible.",
+            FLOAT_UNION_SCHEMA, INT_LONG_UNION_SCHEMA),
+        SchemaCompatibilityType.INCOMPATIBLE, result.getType());
+  }
 }
