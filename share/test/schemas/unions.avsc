@@ -1,0 +1,14 @@
+{"type": "record", "name":"Unions", "namespace": "org.apache.avro",
+  "fields": [
+      {"name": "intOrLong", "type": ["int", "long"]},
+      {"name": "longOrInt", "type": ["long", "int"]},
+      {"name": "intOrLongNullable", "type": ["null", "int", "long"]},
+      {"name": "longOrIntNullable", "type": ["long", "int", "null"]},
+      {"name": "longOrFloatOrDouble", "type": ["long", "float", "double"]},
+      {"name": "floatOrDouble", "type": ["long", "float", "double"]},
+      {"name": "boolOrIntOrLongOrFloatOrDouble", "type": ["boolean", "int", "long", "float", "double"]},
+      {"name": "boolOrIntOrLongOrFloatOrDoubleNullable", "type": ["null", "boolean", "int", "long", "float", "double"]},
+      {"name": "booleanNullable", "type": ["boolean", "null"]},
+      {"name": "nullableBoolean", "type": ["null", "boolean"]}
+  ]
+}

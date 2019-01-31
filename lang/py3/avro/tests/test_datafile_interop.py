@@ -78,6 +78,91 @@ class TestDataFileInterop(unittest.TestCase):
         for datum in dfr:
           self.assertEqual(INTEROP_DATUM, datum)
 
+  def __default_java_datum(self):
+      datum = {
+          'intField': 0,
+          'longField': 0,
+          'stringField': '',
+          'boolField': False,
+          'floatField': 0.0,
+          'doubleField': 0.0,
+          'bytesField': b'',
+          'nullField': None,
+          'arrayField': [],
+          'mapField': {},
+          'unionField': False,
+          'enumField': 'A',
+          'fixedField': b'\x00'*16,
+          'recordField': {
+              'label': 'root',
+              'children': [],
+          }
+      }
+      return datum
+
+  def __gen_map(copies):
+      d = {}
+      for i in range(copies):
+          key = 'key' + str(i)
+          val = {'label': "a" * i}
+          d[key] = val
+      return d
+
+  parameters = [
+      ('stringField', 'åke', 'string'),
+      ('stringField', str('\u3069' 'ke'), 'japanese'),
+      ('stringField', str('\U0001F99E' 'ke'), 'lobster'),
+      ('stringField', 'd' * 5, 'ds'),
+      ('mapField', __gen_map(5), 'map'),
+      ('unionField', True, 'unionAsBooleanTrue'),
+      ('unionField', False, 'unionAsBooleanFalse'),
+      ('unionField', 0.0, 'unionAsDoubleZero'),
+      ('unionField', 1.0, 'unionAsDoubleOne'),
+      ('unionField', [b'\x01\x02\x03', b'\x04\x05', b'\x06'], 'unionAsBytes'),
+
+  ]
+
+  def test_read_from_java(self):
+      for p in self.parameters:
+          with self.subTest(p, params=p):
+              self.__validate_file(p)
+
+  def test_write_to_python(self):
+      for p in self.parameters:
+          with self.subTest(p, params=p):
+              self.__generate_file(p)
+
+
+  def __validate_file(self, p):
+      param = p[0]
+      if callable(p[1]):
+          value = p[1]()
+      else:
+          value = p[1]
+      file = p[2]
+      datum_reader = io.DatumReader()
+      java_datum = self.__default_java_datum()
+      java_datum[param] = value
+      with open("/tmp/java/" + file + ".avro", 'rb') as reader:
+        dfr = datafile.DataFileReader(reader, datum_reader)
+        for datum in dfr:
+          self.assertEqual(java_datum, datum)
+
+  def __generate_file(self, p):
+      param = p[0]
+      if callable(p[1]):
+          value = p[1]()
+      else:
+          value = p[1]
+      file = p[2]
+      datum_writer = io.DatumWriter()
+      java_datum = self.__default_java_datum()
+      java_datum[param] = value
+      with open("/tmp/python/" + file + ".avro", 'wb') as writer:
+        df = datafile.DataFileWriter(writer, datum_writer, INTEROP_SCHEMA)
+        df.append(java_datum)
+        df.flush()
+
 
 if __name__ == '__main__':
-  raise Exception('Use run_tests.py')
+    raise Exception('Use run_tests.py')
